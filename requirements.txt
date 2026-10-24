@@ -1,0 +1,10 @@
+dotenv
+ipykernel
+langchain-ollama
+numpy
+ollama
+paddleocr>=3.4.1
+paddlepaddle==3.2.2
+pip
+pandas
+pydantic

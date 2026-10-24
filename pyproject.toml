@@ -1,0 +1,25 @@
+[project]
+name = "invoice-extraction"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dotenv>=0.9.9",
+    "ipykernel>=7.4.0",
+    "langchain-ollama>=1.1.0",
+    "numpy>=2.5.4",
+    "ollama>=0.6.3",
+    "paddleocr>=3.4.1",
+    "paddlepaddle==3.2.2",
+    "pandas>=3.1.0",
+    "pip>=26.2.2",
+    "pydantic>=2.14.1",
+]
+
+[project.scripts]
+invoice-extraction = "invoice_extraction:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"

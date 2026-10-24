@@ -3,6 +3,7 @@ from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 from InvoiceSchema import invoiceData
 import os
+import json
 
 class InvoiceExtractor:
 
@@ -106,9 +107,9 @@ class InvoiceExtractor:
                 ('human', self.__user_message)
             ]
             
-            field_result = self.__llm.invoke(self.message)
+            self.__field_result = json.loads(self.__llm.invoke(self.message).model_dump_json())
 
         except Exception:
             raise
 
-        return field_result
+        return self.__field_result

@@ -8,3 +8,4 @@ paddlepaddle==3.2.2
 pip
 pandas
 pydantic
+supabase

@@ -2,5 +2,6 @@ from InvoiceExtractor import InvoiceExtractor
 
 if __name__ == "__main__":
     ie = InvoiceExtractor()
-    res = ie.extract_invoice("tests/invoice-1.png", store_to_db=True)
+    src = input("Enter the path to the invoice file (PDF, PNG, or JPEG): ")
+    res = ie.extract_invoice(src, store_to_db=True)
     print(res)

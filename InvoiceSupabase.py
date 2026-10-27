@@ -1,4 +1,4 @@
-from supabase import create_client, Client
+from supabase import create_client
 import os
 from dotenv import load_dotenv
 from retry import retry
@@ -9,17 +9,27 @@ class SupabaseManager:
         try:
             self.__supabase_url = os.getenv("SUPABASE_URL") 
             self.__supabase_key = os.getenv("SUPABASE_KEY")
-            self.__supabase: Client = create_client(self.__supabase_url, self.__supabase_key)
+            self.__supabase = create_client(self.__supabase_url, self.__supabase_key)
             print("Supabase client initialized!")
         except:
             raise ValueError("Supabase URL or Key not found in environment variables.")
 
     @retry(tries=3, delay=1, backoff=2)
-    def insert_extraction_result(self, result):
+    def insert_extraction_result(self, result) -> None:
         try:
-            response = self.__supabase.table("invoice Extraction Data").insert(result).execute()
+            self.__supabase.table("invoice Extraction Data").insert(result).execute()
         except:
-            raise ValueError("Failed to insert data into Supabase. Please check your connection and table schema.")
+            self.log_execution("ERROR", f"Failed to insert data into Supabase: {result}")
+            raise
+        
+    @retry(tries=3, delay=1, backoff=2)
+    def get_supplier_table(self) -> dict:
+        try:
+            response = self.__supabase.table("supplier_tbl").select("*").execute()
+        except:
+            self.log_execution("ERROR", "Failed to retrieve supplier table from Supabase.")
+            raise 
+        return response
 
     @retry(tries=3, delay=1, backoff=2)
     def log_execution(self, type:str, message:str):
@@ -28,6 +38,6 @@ class SupabaseManager:
                 "type": type,
                 "message": message
             }
-            response = self.__supabase.table("invoice Extraction Logs").insert(log_entry).execute()
+            self.__supabase.table("invoice Extraction Logs").insert(log_entry).execute()
         except:
             raise ValueError("Failed to log execution in Supabase. Please check your connection and table schema.")

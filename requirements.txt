@@ -10,3 +10,4 @@ pandas
 pydantic
 supabase
 retry
+pytest

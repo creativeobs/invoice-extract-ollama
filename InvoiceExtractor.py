@@ -2,7 +2,8 @@ from paddleocr import PaddleOCR
 from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 from InvoiceSchema import invoiceData
-from InvoicetoSupabase import SupabaseManager
+from InvoiceSupabase import SupabaseManager
+from InvoiceSupplier import InvoiceSupplier
 import json
 import os
 
@@ -16,9 +17,9 @@ class InvoiceExtractor:
                  field_extractor: str = os.getenv("FIELD_EXTRACT") or "gemma4:31b-cloud"):
 
         self.__fields = ["invoice_number", "invoice_date", "total_amount", "supplier", "currency"]
-        self.__supabase = SupabaseManager()
 
         try:
+            self.__supabase = SupabaseManager()
             self.__ocr = PaddleOCR(
                 text_detection_model_name = text_detect,
                 text_recognition_model_name = text_recog,
@@ -33,7 +34,7 @@ class InvoiceExtractor:
                 model=field_extractor,
                 base_url="http://localhost:11434",
                 temperature=0.1,
-            ).with_structured_output(invoiceData)
+            )
 
             print("LLM Model initialized!")
             self.__supabase.log_execution("INFO", f"LLM Model initialized with {field_extractor}")
@@ -87,13 +88,13 @@ class InvoiceExtractor:
         return self.__llm
 
     @llm.setter
-    def llm(self, field_extractor:str):
+    def llm(self, field_extractor:str) -> None:
         try:
             self.__llm = ChatOllama(
                 model=field_extractor,
                 base_url="http://localhost:11434",
                 temperature=0.1,
-            ).with_structured_output(invoiceData)
+            )
         except Exception:
             self.__supabase.log_execution("ERROR", "Failed to initialize LLM model. Please check your configuration.")
             raise
@@ -108,10 +109,11 @@ class InvoiceExtractor:
                 new_load[key] = res[x][y]
         return new_load
     
-    def extract_invoice(self, path: str, store_to_db: bool = False):
+    def extract_invoice(self, path: str, store_to_db: bool = False) -> dict:
         try:
             self.__supabase.log_execution("INFO", f"Starting invoice extraction for {path}")
             self.__ocr_result = self.__ocr.predict(path)
+            self.__supplierMatch = InvoiceSupplier(model=self.__llm, supabase=self.__supabase)
             self.__user_message = f"""
             Extract the invoice data from the following document.
 
@@ -125,11 +127,13 @@ class InvoiceExtractor:
                 ('human', self.__user_message)
             ]
             
-            self.__field_result = self.__parse_results(self.__llm.invoke(self.message).model_dump(mode='json'))
+            self.__field_result = self.__parse_results(self.__llm.with_structured_output(invoiceData).invoke(self.message).model_dump(mode='json'))
             self.__supabase.log_execution("INFO", f"Extraction completed for {path}")
+            self.__supplierLookup = self.__supplierMatch.supplier_match(self.__field_result.get("supplier_value"))
 
+            self.__to_db =  self.__field_result | self.__supplierLookup
             if store_to_db:
-                self.__supabase.insert_extraction_result(self.__field_result)
+                self.__supabase.insert_extraction_result(self.__to_db)
                 print('Stored to DB') 
                 self.__supabase.log_execution("INFO", f"Extraction result stored to DB for {path}")
 
@@ -137,4 +141,4 @@ class InvoiceExtractor:
             self.__supabase.log_execution("ERROR", "Failed to extract invoice data. Please check your input and model configuration.")
             raise
 
-        return self.__field_result
+        return self.__to_db

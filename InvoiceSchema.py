@@ -21,6 +21,11 @@ class dateValues(BaseModel):
                 return value
         raise ValueError('Unsupported date format')
 
+class SupplierMatch(BaseModel):
+    supplier_lookup_value: str | None = Field(description="Closest Supplier Match or null if missing")
+    supplier_lookup_confidence_level: float | None = Field(description="Expected Confidence Level", ge=0.0, le=1.0)
+    supplier_lookup_reason: str | None = Field(description="Brief explanation of your extracted value.")
+
 class invoiceData(BaseModel):
     invoice_number: fieldValues[str] 
     invoice_date: dateValues 

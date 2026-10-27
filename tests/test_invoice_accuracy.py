@@ -1,5 +1,5 @@
 
-from InvoiceExtractor import InvoiceExtractor
+from invoice_extraction.InvoiceExtractor import InvoiceExtractor
 
 TESTS_DIR = "./tests"
 

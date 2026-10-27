@@ -10,7 +10,6 @@ class SupabaseManager:
             self.__supabase_url = os.getenv("SUPABASE_URL") 
             self.__supabase_key = os.getenv("SUPABASE_KEY")
             self.__supabase = create_client(self.__supabase_url, self.__supabase_key)
-            print("Supabase client initialized!")
         except:
             raise ValueError("Supabase URL or Key not found in environment variables.")
 
@@ -29,7 +28,7 @@ class SupabaseManager:
         except:
             self.log_execution("ERROR", "Failed to retrieve supplier table from Supabase.")
             raise 
-        return response
+        return response.data or []
 
     @retry(tries=3, delay=1, backoff=2)
     def log_execution(self, type:str, message:str):

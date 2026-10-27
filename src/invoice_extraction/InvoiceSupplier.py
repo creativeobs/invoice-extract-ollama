@@ -1,17 +1,15 @@
 from langchain_ollama import ChatOllama
-from InvoiceSchema import SupplierMatch
-from InvoiceSupabase import SupabaseManager
+from invoice_extraction.InvoiceSchema import SupplierMatch
+from invoice_extraction.InvoiceSupabase import SupabaseManager
 
 class InvoiceSupplier:
-    def __init__(self, 
-                 model: ChatOllama = None,
-                 supabase: SupabaseManager = None):
+    def __init__(self, model: ChatOllama = None):
         try:
-            if model is None or supabase is None:
-                raise ValueError("Model and SupabaseManager instances must be provided.")
+            if model is None:
+                raise ValueError("Model instance must be provided.")
 
             self.__llm = model.with_structured_output(SupplierMatch)
-            self.__supabase = supabase
+            self.__supabase = SupabaseManager()
 
             self.__suppliers = self.__supabase.get_supplier_table()
             

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+from decimal import Decimal
 
 class fieldValues[T] (BaseModel):
     value: T | None = Field(description="Extracted value, or null if missing")
@@ -29,7 +30,7 @@ class SupplierMatch(BaseModel):
 class invoiceData(BaseModel):
     invoice_number: fieldValues[str] 
     invoice_date: dateValues 
-    total_amount: fieldValues[float] 
+    total_amount: fieldValues[Decimal] 
     supplier: fieldValues[str]
     currency: fieldValues[str]
 

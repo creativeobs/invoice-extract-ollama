@@ -1,110 +1,138 @@
 # AI-Powered Invoice Extraction
 
-An AI-powered invoice extraction pipeline that transforms unstructured invoice documents into structured, validated data using Optical Character Recognition (OCR), Large Language Models (LLMs), and Pydantic.
+An AI-assisted invoice processing pipeline that converts PDF and image-based invoices into structured data using PaddleOCR, LangChain, Ollama, and Pydantic. The workflow extracts invoice fields, attaches field-level confidence estimates and explanations, matches suppliers against reference records, and supports persistence to Supabase.
 
-The project combines OCR-based text extraction with LLM-powered information extraction and schema validation to convert invoice data into a consistent format for downstream processing.
+> **Project status:** Portfolio / development project. Extraction, validation, supplier matching, and database integration are implemented, but the current test interface and database coupling need further work before the pipeline can be considered reliable for production use.
 
 ## Overview
 
-Invoices often contain inconsistent layouts, date formats, currency symbols, and financial information. Extracting these fields manually can be time-consuming and error-prone.
+Invoice data is often embedded in documents with inconsistent layouts, date formats, currency symbols, and supplier names. This project explores how OCR and large language models can automate field extraction while retaining structured validation and traceable explanations.
 
-This project explores an automated approach to invoice processing by combining document text extraction, structured LLM output, and Python-based data validation.
+### Features
 
-### Key Features
-
-- **OCR processing:** Extract text from invoice documents using PaddleOCR.
-- **LLM-powered extraction:** Use LangChain and Ollama to extract relevant invoice information from OCR text.
-- **Structured output:** Define the expected response format using Pydantic models.
-- **Schema validation:** Validate extracted field types and reject unexpected fields.
-- **Data normalization:** Handle common date formats and currency-formatted amounts.
-- **Missing-value handling:** Represent missing or unreadable values as `null` rather than inventing information.
-- **Extensible architecture:** Separate extraction, validation, and downstream processing responsibilities.
+- **Document OCR:** Uses PaddleOCR to recognize text from invoice documents.
+- **LLM-based extraction:** Uses LangChain and Ollama to extract structured invoice information.
+- **Schema validation:** Uses Pydantic models to define expected fields and validate model output.
+- **Field-level explanations:** Captures a confidence estimate and a reason for each extracted field.
+- **Supplier matching:** Uses an LLM to recommend a matching supplier from Supabase supplier records.
+- **Database integration:** Supports storing extraction results and execution logs in Supabase.
+- **Retry handling:** Uses retry decorators for selected Supabase operations.
+- **Accuracy evaluation:** Includes a labeled set of five sample invoices for field-level comparison.
 
 ## Architecture
 
-The pipeline follows a modular extraction workflow:
-
 ```text
-Invoice Document
-       |
-       v
-OCR Processing
-   (PaddleOCR)
-       |
-       v
-Extracted OCR Text
-       |
-       v
-LLM Information Extraction
- (LangChain + Ollama)
-       |
-       v
-Structured Output
-   (InvoiceData)
-       |
-       v
-Pydantic Validation
- and Normalization
-       |
-       v
-Validated Invoice Data
-       |
-       v
-Downstream Processing
+Invoice PDF / Image
+        |
+        v
+PaddleOCR
+        |
+        v
+Recognized Invoice Text
+        |
+        v
+LangChain + Ollama
+        |
+        v
+Pydantic Structured Output
+        |
+        v
+Field Parsing and Validation
+        |
+        v
+Supplier Matching
+        |
+        v
+Structured Extraction Result
+        |
+        v
+Supabase Persistence
 ```
 
-Each component serves a distinct purpose:
+### Technology stack
 
-| Component | Responsibility |
+| Technology | Responsibility |
 |---|---|
-| PaddleOCR | Extract text from invoice documents |
-| LangChain | Orchestrate model calls and structured output |
-| Ollama | Provide access to a locally hosted LLM |
-| Pydantic | Validate data types, field definitions, and constraints |
-| Python validators | Normalize supported date and monetary formats |
+| Python 3.12+ | Application logic |
+| uv | Dependency and environment management |
+| PaddleOCR | Optical character recognition |
+| LangChain | LLM orchestration and structured output |
+| Ollama | Model runtime and model access |
+| Pydantic | Data schemas and validation |
+| Supabase | Supplier reference data, extraction results, and logs |
+| pytest | Automated testing |
 
-## Extracted Fields
+## Extracted fields
 
-The current invoice schema focuses on three fields.
+The current invoice schema defines five business fields. Each field includes a value, a confidence estimate, and a reason.
 
-| Field | Data type | Description |
-|---|---|---|
-| `invoice_number` | `str \| None` | Invoice identifier |
-| `invoice_date` | `date \| None` | Invoice issue date |
-| `total_amount` | `Decimal \| None` | Final amount due or total payable |
+| Field | Intended value |
+|---|---|
+| `invoice_number` | Invoice identifier |
+| `invoice_date` | Invoice date in `MM/DD/YYYY` format |
+| `total_amount` | Invoice total represented using `Decimal` |
+| `supplier` | Supplier name extracted from the document |
+| `currency` | Currency code or value identified from the invoice |
 
-The extraction rules prioritize the final amount due rather than the subtotal, individual taxes, or line-item amounts.
+Supplier matching adds these fields:
 
-If a field is missing or cannot be determined from the document, the pipeline should return `null` instead of fabricating a value.
+- `supplier_lookup_value`
+- `supplier_lookup_confidence_level`
+- `supplier_lookup_reason`
 
-## Technology Stack
+The extraction prompt instructs the model to return missing fields as `null` rather than inventing information. Confidence values are model-generated estimates and should not be treated as calibrated probabilities.
 
-- **Python 3.12+** — Core development language
-- **uv** — Python project and dependency management
-- **PaddleOCR** — Optical character recognition
-- **LangChain** — LLM orchestration and structured output
-- **Ollama** — Local LLM runtime
-- **Pydantic v2** — Schema definition and validation
-- **Pandas** — Data manipulation and tabular processing
+## Project structure
 
-## Getting Started
+```text
+invoice-extract-ollama/
+├── src/
+│   └── invoice_extraction/
+│       ├── __init__.py
+│       ├── cli.py
+│       ├── InvoiceExtractor.py
+│       ├── InvoiceOcr.py
+│       ├── InvoiceSchema.py
+│       ├── InvoiceSupplier.py
+│       └── InvoiceSupabase.py
+├── tests/
+│   └── test_invoice_accuracy.py
+├── notebook/
+├── .env.example
+├── .gitignore
+├── pyproject.toml
+├── requirements.txt
+├── uv.lock
+└── README.md
+```
+
+- `cli.py` — command-line entry point.
+- `InvoiceExtractor.py` — coordinates extraction, structured output, and supplier matching.
+- `InvoiceOcr.py` — initializes PaddleOCR and converts recognized text into a string.
+- `InvoiceSchema.py` — defines extraction and supplier-match schemas.
+- `InvoiceSupplier.py` — matches the extracted supplier against reference records.
+- `InvoiceSupabase.py` — manages database access, persistence, and execution logs.
+- `tests/test_invoice_accuracy.py` — compares extraction output against expected values for sample invoices.
+
+## Getting started
 
 ### Prerequisites
 
-Install the following before running the project:
+Install the following:
 
 - Python 3.12 or later
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Ollama](https://ollama.com/download)
 - A compatible Ollama model
+- A Supabase project with the required tables for the current integrated workflow
 
-PaddleOCR may also require additional system libraries or model downloads depending on your operating system and OCR configuration.
+PaddleOCR may download model assets during initialization and may require additional operating-system dependencies.
 
 ### 1. Clone the repository
 
 ```bash
-git clone --branch dev https://github.com/creativeobs/invoiceExtraction.git
-cd invoiceExtraction
+git clone https://github.com/creativeobs/invoice-extract-ollama.git
+cd invoice-extract-ollama
 ```
 
 ### 2. Install dependencies
@@ -113,143 +141,115 @@ cd invoiceExtraction
 uv sync
 ```
 
-This installs the dependencies declared in `pyproject.toml` and creates or updates the project's virtual environment.
+This installs the dependencies declared in `pyproject.toml` and creates or updates the local virtual environment.
 
-### 3. Configure Ollama
+The `.venv/` directory is intentionally excluded from version control. Each developer should create their own environment using `uv sync`.
 
-Start the Ollama service and download a model compatible with your implementation.
+### 3. Configure environment variables
 
-For example:
+Create a local `.env` file from the template:
 
 ```bash
-ollama pull qwen2.5:7b
+cp .env.example .env
 ```
 
-Start the service if it is not already running:
+Configure the following values:
+
+```dotenv
+SUPABASE_URL=
+SUPABASE_KEY=
+
+TEXT_RECOG=PP-OCRv5_mobile_rec
+TEXT_DETECT=PP-OCRv5_mobile_det
+FIELD_EXTRACT=gemma4:31b-cloud
+```
+
+Use the model name appropriate for your Ollama setup. The model configured in the application must be available to that runtime and support the structured-output behavior required by the integration.
+
+**Security:** Never commit `.env` or expose Supabase credentials in source code, notebooks, logs, or screenshots. If a real key has been exposed, rotate it.
+
+### 4. Configure Ollama
+
+Start Ollama if it is not already running:
 
 ```bash
 ollama serve
 ```
 
-Ollama's local API typically runs at `http://localhost:11434`.
+The application currently uses the Ollama API at:
 
-**Note:** The model name above is an example. Use the model configured in your application and ensure it supports the structured-output features required by your LangChain integration.
-
-### 4. Run the project
-
-Activate the environment if needed:
-
-```bash
-uv run python -c "import invoice_extraction; print('Package imported successfully')"
+```text
+http://localhost:11434
 ```
 
-The project also declares an `invoice-extraction` command-line entry point. Once its `main` function is implemented and configured, you can invoke it with:
+Ensure the configured model is available before running the extraction workflow. Model availability and hardware requirements depend on the selected model.
+
+### 5. Run the CLI
+
+The package defines the `invoice-extraction` command:
 
 ```bash
 uv run invoice-extraction
 ```
 
-For notebook-based development, start Jupyter using the project environment:
+The current CLI prompts for an invoice file path, runs extraction, and prints the resulting data.
+
+**Current behavior:** the CLI initializes `InvoiceExtractor(to_db=True)`, so it enables database persistence. Configure Supabase before running the CLI. An explicit `--save` option and a database-independent extraction mode are recommended future improvements.
+
+Supported document types are intended to include PDF, PNG, JPG, and JPEG files.
+
+## Supabase integration
+
+The current implementation references these tables:
+
+| Table | Purpose |
+|---|---|
+| `supplier_tbl` | Supplier names and alternate names used for matching |
+| `invoice Extraction Data` | Stores extraction results |
+| `invoice Extraction Logs` | Stores execution and error logs |
+
+These names must match the tables configured in your Supabase project. The current implementation uses the Supabase Python client to retrieve supplier records, insert extraction results, and write execution logs.
+
+Avoid logging complete invoice contents or sensitive financial information. Prefer recording execution IDs, processing stages, durations, and sanitized error messages.
+
+## Evaluation and testing
+
+The repository includes five labeled sample invoices covering USD, EUR, GBP, and PHP examples. The expected outputs include invoice identifiers, dates, amounts, supplier names, currencies, and supplier lookup values.
+
+Run the current accuracy test with:
 
 ```bash
-uv run jupyter notebook
+uv run pytest tests/test_invoice_accuracy.py -v
 ```
 
-## Structured Output and Validation
+**Known issue:** the current test calls `extract_invoice(..., store_to_db=False)`, but the extractor method currently accepts only the file path. The test needs to be updated alongside the extraction API before this command can be considered a valid accuracy evaluation. Do not interpret the existence of the test file as evidence that the suite currently passes.
 
-The extraction schema defines the expected fields and their types. LangChain passes the schema to the LLM integration, while Pydantic validates the resulting data.
+A stronger evaluation should report:
 
-A simplified example:
+- Field-level exact-match accuracy
+- Numeric amount accuracy using decimal-safe comparisons
+- Date normalization accuracy
+- Supplier matching accuracy
+- Missing-field behavior
+- Invalid-output and service-failure behavior
 
-```python
-from datetime import date
-from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field
+Schema validation and extraction accuracy are different: a response can pass Pydantic validation and still contain an incorrect value.
 
+## Current limitations and next steps
 
-class InvoiceData(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+- [ ] Align the accuracy test with the current extractor method signature.
+- [ ] Separate core extraction from Supabase initialization so tests can run without database credentials.
+- [ ] Make database persistence an explicit CLI option.
+- [ ] Add unit tests for schemas, OCR conversion, and supplier-matching logic.
+- [ ] Add mocked integration tests for model and database failures.
+- [ ] Normalize dates to an unambiguous internal representation such as ISO `YYYY-MM-DD`.
+- [ ] Add deterministic validation for totals and other financial rules where appropriate.
+- [ ] Route missing, invalid, or ambiguous fields to human review.
+- [ ] Improve structured logging, retry policies, and error handling.
+- [ ] Add CI checks for linting, tests, and package installation.
 
-    invoice_number: str | None = None
-    invoice_date: date | None = None
-    total_amount: Decimal | None = Field(
-        default=None,
-        ge=0,
-    )
-```
+## Engineering goals
 
-The model should be configured to return only the defined fields. Additional Python validators can normalize supported date and amount formats before validation.
+This project is intended to demonstrate applied AI engineering through the integration of document processing, structured LLM output, schema validation, business-record matching, database persistence, and automated evaluation.
 
-For example, the following OCR values:
-
-```text
-Invoice Number: INV-001
-Invoice Date: 13-07-2023
-Total Due: $2,510.00
-```
-
-Can be normalized into:
-
-```json
-{
-  "invoice_number": "INV-001",
-  "invoice_date": "2023-07-13",
-  "total_amount": "2510.00"
-}
-```
-
-The JSON example represents the serialized data; the Pydantic model uses Python `date` and `Decimal` objects internally.
-
-### Validation Principles
-
-1. Reject unexpected fields.
-2. Normalize supported date and monetary formats.
-3. Preserve missing values as `None`.
-4. Avoid inventing missing invoice information.
-5. Distinguish schema validity from factual extraction accuracy.
-6. Route invalid or ambiguous results for further processing or human review.
-
-Pydantic validates data against the defined rules, but schema validity alone does not guarantee that the extracted values accurately reflect the original document.
-
-## Project Configuration
-
-Project dependencies and build configuration are defined in `pyproject.toml`.
-
-To inspect the installed dependencies:
-
-```bash
-uv pip list
-```
-
-To add a new dependency:
-
-```bash
-uv add package-name
-```
-
-For development-only dependencies:
-
-```bash
-uv add --dev package-name
-```
-
-## Development Roadmap
-
-Potential next steps for the project include:
-
-- [ ] Expand extraction to additional invoice fields.
-- [ ] Add automated unit tests for schemas and normalization.
-- [ ] Implement retry and error-handling strategies for failed model responses.
-- [ ] Add extraction-quality evaluations against labeled invoice samples.
-- [ ] Validate extracted amounts against invoice totals and tax breakdowns.
-- [ ] Add confidence-based review for ambiguous or incomplete extractions.
-- [ ] Export validated results to CSV, Excel, or a downstream business system.
-- [ ] Add structured logging and monitoring for production workflows.
-
-## Contributing
-
-Contributions and suggestions are welcome. When extending the pipeline, keep extraction prompts, schema definitions, normalization rules, and business validations clearly separated.
-
-## License
-
-No license has been specified in this README. Add the appropriate license information once the repository's licensing terms have been established.
+The long-term objective is to evolve the prototype into a more reliable document-processing workflow with testable components, measurable extraction quality, clear failure handling, and human review for uncertain results.

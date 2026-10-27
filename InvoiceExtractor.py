@@ -126,6 +126,7 @@ class InvoiceExtractor:
             ]
             
             self.__field_result = self.__parse_results(self.__llm.invoke(self.message).model_dump(mode='json'))
+            self.__supabase.log_execution("INFO", f"Extraction completed for {path}")
 
             if store_to_db:
                 self.__supabase.insert_extraction_result(self.__field_result)

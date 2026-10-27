@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from datetime import date, datetime
+from datetime import datetime
 
 class fieldValues[T] (BaseModel):
     value: T | None = Field(description="Extracted value, or null if missing")

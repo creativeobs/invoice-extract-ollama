@@ -210,9 +210,8 @@ The current implementation references these tables:
 
 These names must match the tables configured in your Supabase project. The current implementation uses the Supabase Python client to retrieve supplier records, insert extraction results, and write execution logs.
 
-#### Extraction Data
+#### Supabase Snapshots:
 <img width="1856" height="424" alt="image" src="https://github.com/user-attachments/assets/72791590-ae0e-4485-a905-58131f4495fe" />
-#### Execution Logs
 <img width="1184" height="652" alt="image" src="https://github.com/user-attachments/assets/600aea45-1579-4da8-9f59-b55bbcfb745c" />
 
 Avoid logging complete invoice contents or sensitive financial information. Prefer recording execution IDs, processing stages, durations, and sanitized error messages.

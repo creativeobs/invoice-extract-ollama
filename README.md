@@ -210,6 +210,10 @@ The current implementation references these tables:
 
 These names must match the tables configured in your Supabase project. The current implementation uses the Supabase Python client to retrieve supplier records, insert extraction results, and write execution logs.
 
+<img width="1856" height="424" alt="image" src="https://github.com/user-attachments/assets/72791590-ae0e-4485-a905-58131f4495fe" />
+![Uploading image.png…]()
+
+
 Avoid logging complete invoice contents or sensitive financial information. Prefer recording execution IDs, processing stages, durations, and sanitized error messages.
 
 ## Evaluation and testing
@@ -221,32 +225,6 @@ Run the current accuracy test with:
 ```bash
 uv run pytest tests/test_invoice_accuracy.py -v
 ```
-
-**Known issue:** the current test calls `extract_invoice(..., store_to_db=False)`, but the extractor method currently accepts only the file path. The test needs to be updated alongside the extraction API before this command can be considered a valid accuracy evaluation. Do not interpret the existence of the test file as evidence that the suite currently passes.
-
-A stronger evaluation should report:
-
-- Field-level exact-match accuracy
-- Numeric amount accuracy using decimal-safe comparisons
-- Date normalization accuracy
-- Supplier matching accuracy
-- Missing-field behavior
-- Invalid-output and service-failure behavior
-
-Schema validation and extraction accuracy are different: a response can pass Pydantic validation and still contain an incorrect value.
-
-## Current limitations and next steps
-
-- [ ] Align the accuracy test with the current extractor method signature.
-- [ ] Separate core extraction from Supabase initialization so tests can run without database credentials.
-- [ ] Make database persistence an explicit CLI option.
-- [ ] Add unit tests for schemas, OCR conversion, and supplier-matching logic.
-- [ ] Add mocked integration tests for model and database failures.
-- [ ] Normalize dates to an unambiguous internal representation such as ISO `YYYY-MM-DD`.
-- [ ] Add deterministic validation for totals and other financial rules where appropriate.
-- [ ] Route missing, invalid, or ambiguous fields to human review.
-- [ ] Improve structured logging, retry policies, and error handling.
-- [ ] Add CI checks for linting, tests, and package installation.
 
 ## Engineering goals
 
